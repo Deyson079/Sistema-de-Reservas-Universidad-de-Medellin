@@ -1,0 +1,118 @@
+/* =========================================================
+   Reservas Deportivas Universidad de Medellín — tokens base
+   ========================================================= */
+:root{
+  /* Marca */
+  --rojo-50:#FBEDEE; --rojo-100:#F5D3D4; --rojo-200:#EBA8AA; --rojo-600:#C2262B; --rojo-700:#932428; --rojo-800:#6E1A1E;
+  --amarillo-100:#FCF6D3; --amarillo-400:#F3D941; --amarillo-600:#C9A80F;
+  --petroleo-50:#EAF0F5; --petroleo-100:#CFDCE8; --petroleo-500:#3F5F80; --petroleo-700:#2B445F; --petroleo-900:#1C2E40;
+  --tinta:#16222F; --gris-700:#4A5560; --gris-500:#69737C; --gris-300:#C4CAD0; --gris-200:#E1E4E6; --gris-50:#F5F6F7; --blanco:#FFFFFF;
+  /* Estados del sistema */
+  --exito:#1F7A4D; --exito-bg:#E5F2EB; --alerta:#B26A00; --alerta-bg:#FBEFDC; --error:#B3261E; --error-bg:#FBE8E6; --info:#2B5F8A; --info-bg:#E6EEF6;
+  /* Gráficas (validadas para daltonismo) */
+  --graf-comunidad:#2F6FA8; --graf-externo:#C2262B;
+  /* Semánticos */
+  --fondo:var(--blanco); --superficie:var(--gris-50); --borde:var(--gris-200); --texto:var(--tinta); --texto-2:var(--gris-700);
+  --accion:var(--rojo-600); --accion-hover:var(--rojo-700);
+  /* Tipografía */
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-texto:"Open Sans",system-ui,sans-serif;
+  /* Espaciado base 8 */
+  --s-05:4px; --s-1:8px; --s-2:16px; --s-3:24px; --s-4:32px; --s-5:40px; --s-6:48px; --s-8:64px; --s-10:80px; --s-12:96px; --s-16:128px;
+  /* Radios */
+  --r-sm:8px; --r-md:12px; --r-lg:20px; --r-pill:999px;
+  /* Sombras */
+  --sh-1:0 1px 2px rgba(22,34,47,.08),0 1px 1px rgba(22,34,47,.04);
+  --sh-2:0 8px 20px -6px rgba(22,34,47,.16);
+  --sh-3:0 24px 48px -16px rgba(22,34,47,.32);
+  --sh-rojo:0 12px 24px -10px rgba(147,36,40,.6);
+  /* Movimiento */
+  --ease:cubic-bezier(.2,.8,.2,1); --t-rapida:140ms; --t-media:260ms;
+  /* Foco */
+  --foco:0 0 0 3px var(--blanco),0 0 0 6px var(--petroleo-700);
+  --foco-oscuro:0 0 0 3px var(--tinta),0 0 0 6px var(--amarillo-400);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--f-texto);font-size:16px;line-height:1.5;color:var(--texto);background:var(--fondo);-webkit-font-smoothing:antialiased}
+img,svg{display:block;max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+:focus{outline:none}
+:focus-visible{outline:none;box-shadow:var(--foco);border-radius:var(--r-sm)}
+.oscuro :focus-visible,.sobre-rojo :focus-visible{box-shadow:var(--foco-oscuro)}
+.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.i-sm{width:16px;height:16px}.i-lg{width:24px;height:24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Tipografía ---------- */
+.t-display,.t-h1,.t-h2,.t-h3,.t-h4{font-family:var(--f-display);text-transform:uppercase;margin:0;letter-spacing:.005em}
+.t-display{font-weight:800;font-size:112px;line-height:.86}
+.t-h1{font-weight:800;font-size:64px;line-height:.94}
+.t-h2{font-weight:800;font-size:48px;line-height:.96}
+.t-h3{font-weight:700;font-size:32px;line-height:1}
+.t-h4{font-weight:700;font-size:24px;line-height:1.05}
+.t-lead{font-size:18px;line-height:28px}
+.t-body{font-size:16px;line-height:24px}
+.t-small{font-size:14px;line-height:20px}
+.t-cap{font-size:12px;line-height:16px}
+.t-num{font-family:var(--f-display);font-weight:700;font-variant-numeric:tabular-nums}
+@media (max-width:760px){
+  .t-display{font-size:60px;line-height:.88}
+  .t-h1{font-size:44px}.t-h2{font-size:36px}.t-h3{font-size:26px}.t-h4{font-size:20px}
+}
+
+/* ---------- Botones ---------- */
+.btn{--h:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:var(--h);min-width:44px;padding:0 22px;border-radius:var(--r-sm);border:2px solid transparent;font-weight:700;font-size:15px;line-height:1;text-decoration:none;cursor:pointer;white-space:nowrap;transition:background var(--t-rapida) var(--ease),color var(--t-rapida),border-color var(--t-rapida),transform var(--t-rapida) var(--ease),box-shadow var(--t-rapida)}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn-sm{--h:36px;padding:0 14px;font-size:14px}
+.btn-sm::after{content:"";position:absolute;inset:-4px 0}/* área táctil 44px */
+.btn-sm{position:relative}
+.btn-lg{--h:56px;padding:0 28px;font-size:16px}
+.btn-primario{background:var(--rojo-600);color:#fff;box-shadow:var(--sh-rojo)}
+.btn-primario:hover{background:var(--rojo-700)}
+.btn-secundario{background:var(--petroleo-700);color:#fff}
+.btn-secundario:hover{background:var(--petroleo-900)}
+.btn-contorno{background:transparent;border-color:currentColor;color:var(--rojo-600)}
+.btn-contorno:hover{background:var(--rojo-50)}
+.btn-fantasma{background:transparent;color:var(--tinta)}
+.btn-fantasma:hover{background:var(--gris-50)}
+.btn-peligro{background:var(--error);color:#fff}
+.btn-peligro:hover{background:#8E1D17}
+.btn-destacado{background:var(--amarillo-400);color:var(--tinta)}
+.btn-destacado:hover{background:#FFE45C;box-shadow:0 10px 20px -10px rgba(0,0,0,.45)}
+.btn-blanco{background:#fff;color:var(--rojo-700)}
+.btn-contorno-claro{background:transparent;border-color:rgba(255,255,255,.85);color:#fff}
+.btn-contorno-claro:hover{background:rgba(255,255,255,.12);border-color:#fff}
+.btn[disabled],.btn.is-disabled{background:var(--gris-200);color:var(--gris-500);border-color:transparent;box-shadow:none;cursor:not-allowed}
+.btn.is-loading{color:transparent;position:relative;pointer-events:none}
+.btn.is-loading::before{content:"";position:absolute;width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;animation:gira .7s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+
+/* ---------- Chips de estado de reserva ---------- */
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 8px;border-radius:var(--r-pill);font-size:13px;font-weight:600;line-height:1;white-space:nowrap;border:1px solid transparent}
+.chip .i{width:15px;height:15px;stroke-width:2.2}
+.chip--libre{background:#fff;color:var(--exito);border-color:#9CCBB2}
+.chip--confirmada{background:var(--exito-bg);color:var(--exito)}
+.chip--pendiente_pago{background:var(--alerta-bg);color:#8A5200}
+.chip--en_validacion{background:var(--info-bg);color:var(--info)}
+.chip--rechazada{background:var(--error-bg);color:var(--error)}
+.chip--vencida{background:var(--gris-200);color:var(--gris-700)}
+.chip--cancelada{background:#fff;color:var(--gris-700);border-color:var(--gris-300)}
+.chip--asistio{background:var(--petroleo-50);color:var(--petroleo-700)}
+.chip--no_asistio{background:#fff;color:var(--error);border-color:#E7A9A4}
+.chip--fuera_de_servicio{background:var(--tinta);color:#fff}
+
+/* ---------- Badges de rol ---------- */
+.badge{display:inline-flex;align-items:center;gap:6px;height:26px;white-space:nowrap;padding:0 10px;border-radius:6px;font-size:12px;font-weight:700;line-height:1}
+.badge .i{width:14px;height:14px}
+.badge--comunidad{background:var(--petroleo-700);color:#fff}
+.badge--externo{background:var(--rojo-600);color:#fff}
+.badge--personal{background:var(--tinta);color:var(--amarillo-400)}
+
+/* ---------- Duotono rojo para fotografía ---------- */
+.duotono{position:relative;overflow:hidden;background:var(--rojo-800);isolation:isolate}
+.duotono img{width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.15) brightness(1.05);mix-blend-mode:screen}
+.duotono::after{content:"";position:absolute;inset:0;background:var(--rojo-600);mix-blend-mode:multiply;pointer-events:none}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}

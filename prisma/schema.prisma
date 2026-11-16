@@ -1,0 +1,301 @@
+// Reservas Deportivas Universidad de Medellín — modelo de datos
+// Nombres de tablas y columnas en español, como el modelo de referencia del brief.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["queryCompiler", "driverAdapters"]
+  engineType      = "client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum TipoUsuario {
+  comunidad
+  externo
+}
+
+enum RolUsuario {
+  estudiante
+  docente
+  administrativo
+  egresado
+  externo
+}
+
+enum EstadoUsuario {
+  activo
+  bloqueado
+  eliminado
+}
+
+enum RolPersonal {
+  tesoreria
+  bienestar
+  administrador
+}
+
+enum TipoPersona {
+  natural
+  juridica
+}
+
+enum EstadoCancha {
+  activa
+  fuera_de_servicio
+}
+
+/// Estados de reserva (libre y fuera_de_servicio se calculan, no se guardan)
+enum EstadoReserva {
+  confirmada
+  pendiente_pago
+  en_validacion
+  rechazada
+  vencida
+  cancelada
+  asistio
+  no_asistio
+}
+
+enum EstadoFactura {
+  sin_pagar
+  pagada
+  vencida
+  anulada
+}
+
+enum MetodoPago {
+  tarjeta
+  pse
+  nequi
+  daviplata
+  transferencia
+  caja
+}
+
+enum EstadoPago {
+  pendiente
+  en_validacion
+  validado
+  rechazado
+}
+
+enum TipoCodigo {
+  registro
+  recuperacion
+  doble_factor
+  cambio_correo
+}
+
+model Usuario {
+  id               String         @id @default(cuid())
+  tipo             TipoUsuario
+  rol              RolUsuario
+  nombres          String
+  apellidos        String         @default("")
+  tipoDocumento    String         @default("CC") @map("tipo_documento")
+  documento        String
+  correo           String         @unique
+  correoVerificado Boolean        @default(false) @map("correo_verificado")
+  celular          String
+  programa         String?
+  passwordHash     String         @map("password_hash")
+  estado           EstadoUsuario  @default(activo)
+  intentosFallidos Int            @default(0) @map("intentos_fallidos")
+  bloqueadoHasta   DateTime?      @map("bloqueado_hasta")
+  preferencias     Json           @default("{\"correo\":true,\"recordatorio\":true}")
+  creadoEn         DateTime       @default(now()) @map("creado_en")
+
+  facturacion    DatosFacturacion?
+  reservas       Reserva[]
+  notificaciones Notificacion[]
+
+  @@map("usuarios")
+}
+
+model Personal {
+  id            String      @id @default(cuid())
+  rol           RolPersonal
+  nombre        String
+  correo        String      @unique
+  passwordHash  String      @map("password_hash")
+  activo        Boolean     @default(true)
+  ultimoIngreso DateTime?   @map("ultimo_ingreso")
+  creadoEn      DateTime    @default(now()) @map("creado_en")
+
+  pagosValidados Pago[]
+
+  @@map("personal")
+}
+
+model DatosFacturacion {
+  usuarioId   String      @id @map("usuario_id")
+  tipoPersona TipoPersona @map("tipo_persona")
+  nitCedula   String      @map("nit_cedula")
+  razonSocial String      @map("razon_social")
+  direccion   String
+  ciudad      String
+  rutUrl      String?     @map("rut_url")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("datos_facturacion")
+}
+
+model Cancha {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  nombre      String
+  deportes    String[]
+  capacidad   Int
+  dimensiones String
+  descripcion String       @default("")
+  ubicacion   String       @default("")
+  servicios   String[]
+  fotos       String[]
+  ilustracion String       @default("placa")
+  tarifaHora  Int          @map("tarifa_hora")
+  estado      EstadoCancha @default(activa)
+  orden       Int          @default(0)
+
+  bloqueos Bloqueo[]
+  reservas Reserva[]
+
+  @@map("canchas")
+}
+
+model Bloqueo {
+  id        String   @id @default(cuid())
+  canchaId  String   @map("cancha_id")
+  desde     DateTime
+  hasta     DateTime
+  motivo    String
+  tipo      String   @default("mantenimiento") // mantenimiento | evento
+  creadoPor String?  @map("creado_por")
+  creadoEn  DateTime @default(now()) @map("creado_en")
+
+  cancha Cancha @relation(fields: [canchaId], references: [id], onDelete: Cascade)
+
+  @@index([canchaId, desde, hasta])
+  @@map("bloqueos")
+}
+
+model Reserva {
+  id                String        @id @default(cuid())
+  codigo            String        @unique
+  usuarioId         String        @map("usuario_id")
+  canchaId          String        @map("cancha_id")
+  fecha             DateTime      @db.Date
+  horaInicio        Int           @map("hora_inicio")
+  horaFin           Int           @map("hora_fin")
+  actividad         String
+  participantes     Int
+  observaciones     String?
+  estado            EstadoReserva
+  limitePago        DateTime?     @map("limite_pago")
+  motivoCancelacion String?       @map("motivo_cancelacion")
+  canceladaPor      String?       @map("cancelada_por")
+  creadaEn          DateTime      @default(now()) @map("creada_en")
+  actualizadaEn     DateTime      @updatedAt @map("actualizada_en")
+
+  usuario Usuario  @relation(fields: [usuarioId], references: [id])
+  cancha  Cancha   @relation(fields: [canchaId], references: [id])
+  factura Factura?
+
+  @@index([canchaId, fecha])
+  @@index([usuarioId, estado])
+  @@map("reservas")
+}
+
+model Factura {
+  id        String        @id @default(cuid())
+  reservaId String        @unique @map("reserva_id")
+  numero    String        @unique
+  valor     Int
+  iva       Int           @default(0)
+  total     Int
+  estado    EstadoFactura @default(sin_pagar)
+  creadaEn  DateTime      @default(now()) @map("creada_en")
+  venceEn   DateTime      @map("vence_en")
+
+  reserva Reserva @relation(fields: [reservaId], references: [id])
+  pagos   Pago[]
+
+  @@map("facturas")
+}
+
+model Pago {
+  id             String     @id @default(cuid())
+  facturaId      String     @map("factura_id")
+  metodo         MetodoPago
+  referencia     String?
+  banco          String?
+  comprobanteUrl String?    @map("comprobante_url")
+  valor          Int
+  fechaPago      DateTime?  @map("fecha_pago") @db.Date
+  estado         EstadoPago
+  validadoPorId  String?    @map("validado_por")
+  validadoEn     DateTime?  @map("validado_en")
+  motivoRechazo  String?    @map("motivo_rechazo")
+  fecha          DateTime   @default(now())
+
+  factura     Factura   @relation(fields: [facturaId], references: [id])
+  validadoPor Personal? @relation(fields: [validadoPorId], references: [id])
+
+  @@index([estado])
+  @@map("pagos")
+}
+
+model CodigoVerificacion {
+  id       String     @id @default(cuid())
+  correo   String
+  codigo   String // hash SHA-256 del código
+  tipo     TipoCodigo
+  expiraEn DateTime   @map("expira_en")
+  intentos Int        @default(0)
+  usado    Boolean    @default(false)
+  creadoEn DateTime   @default(now()) @map("creado_en")
+
+  @@index([correo, tipo])
+  @@map("codigos_verificacion")
+}
+
+model Notificacion {
+  id        String   @id @default(cuid())
+  usuarioId String   @map("usuario_id")
+  tipo      String // pago_recibido | pago_aprobado | pago_rechazado | recordatorio | cancelacion | confirmada | vencida
+  titulo    String
+  mensaje   String
+  enlace    String?
+  leida     Boolean  @default(false)
+  fecha     DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, leida])
+  @@map("notificaciones")
+}
+
+model Auditoria {
+  id        String   @id @default(cuid())
+  actor     String
+  actorRol  String   @map("actor_rol")
+  accion    String
+  entidad   String
+  entidadId String?  @map("entidad_id")
+  detalle   String?
+  fecha     DateTime @default(now())
+
+  @@index([fecha])
+  @@map("auditoria")
+}
+
+model Configuracion {
+  clave String @id
+  valor Json
+
+  @@map("configuracion")
+}
