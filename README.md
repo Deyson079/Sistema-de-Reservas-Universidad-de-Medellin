@@ -44,6 +44,11 @@ Con `EMAIL_MODO="consola"` los correos no se envían: los códigos de verificaci
 
 ## Conectar Supabase
 
+> El proyecto **Sistema-de-Reservas-Universidad-de-Medellin** (`qoseidizfcmvubwxzqwl`) ya tiene aplicadas las dos migraciones (tablas + Row Level Security), los datos de demostración y el bucket privado `documentos`. Solo falta poner las variables de entorno.
+>
+> Para regenerar las reservas de demostración con fechas actuales: Supabase → SQL Editor → pega `prisma/seed-demo.sql` y ejecútalo.
+
+
 1. Crea un proyecto en [supabase.com](https://supabase.com).
 2. En **Project Settings → Database → Connection string**, copia:
    - la cadena con *pooler*, puerto `6543`, en `DATABASE_URL` (agrega `?pgbouncer=true`);
