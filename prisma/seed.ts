@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { PrismaClient, type EstadoReserva, type MetodoPago } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { CONFIG_POR_DEFECTO } from "../src/lib/config";
+import { sincronizarAuth } from "./sincronizar-auth";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 const DEMO = process.env.SEED_DEMO !== "false";
@@ -49,7 +50,7 @@ async function main() {
   const staff: Record<string, { id: string }> = {};
   for (const p of personal) staff[p.rol] = await db.personal.upsert({ where: { correo: p.correo }, create: { ...p, passwordHash: pass }, update: {} });
 
-  if (!DEMO) { console.log("Listo (sin datos de demostración)."); return; }
+  if (!DEMO) { await sincronizarAuth(db); console.log("Listo (sin datos de demostración)."); return; }
 
   // Limpieza de datos de demostración
   await db.pago.deleteMany(); await db.factura.deleteMany(); await db.reserva.deleteMany(); await db.notificacion.deleteMany();
@@ -176,6 +177,8 @@ async function main() {
     { actor: "bienestar@udemedellin.edu.co", actorRol: "bienestar", accion: "crear_bloqueo", entidad: "bloqueos", detalle: "Cancha de voleibol: cambio de malla y demarcación", fecha: new Date(Date.now() - 2 * 86400_000) },
     { actor: "tesoreria@udemedellin.edu.co", actorRol: "tesoreria", accion: "rechazar_pago", entidad: "pagos", detalle: "El valor del comprobante no coincide", fecha: new Date(Date.now() - 5 * 3600_000) },
   ] });
+
+  await sincronizarAuth(db);
 
   const total = await db.reserva.count();
   console.log(`Listo: ${canchas.length} canchas, ${comunidad.length + externos.length} usuarios, ${total} reservas.`);

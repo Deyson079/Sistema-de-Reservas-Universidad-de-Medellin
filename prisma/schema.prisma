@@ -99,10 +99,11 @@ model Usuario {
   tipoDocumento    String         @default("CC") @map("tipo_documento")
   documento        String
   correo           String         @unique
+  authId           String?        @unique @map("auth_id") /// id en Supabase Auth (auth.users)
   correoVerificado Boolean        @default(false) @map("correo_verificado")
   celular          String
   programa         String?
-  passwordHash     String         @map("password_hash")
+  passwordHash     String?        @map("password_hash") /// solo para migrar cuentas antiguas a Supabase Auth
   estado           EstadoUsuario  @default(activo)
   intentosFallidos Int            @default(0) @map("intentos_fallidos")
   bloqueadoHasta   DateTime?      @map("bloqueado_hasta")
@@ -121,7 +122,8 @@ model Personal {
   rol           RolPersonal
   nombre        String
   correo        String      @unique
-  passwordHash  String      @map("password_hash")
+  authId        String?     @unique @map("auth_id") /// id en Supabase Auth (auth.users)
+  passwordHash  String?     @map("password_hash") /// solo para migrar cuentas antiguas a Supabase Auth
   activo        Boolean     @default(true)
   ultimoIngreso DateTime?   @map("ultimo_ingreso")
   creadoEn      DateTime    @default(now()) @map("creado_en")

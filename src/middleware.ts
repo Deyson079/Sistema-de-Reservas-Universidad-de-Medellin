@@ -1,28 +1,58 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE, leer } from "@/lib/sesion-token";
+import { createServerClient } from "@supabase/ssr";
+import { COOKIE_PERSONAL, sesionDesdeClaims, type Sesion } from "@/lib/sesion-token";
+import { ajustarCookie, COOKIE_RECORDAR, supabaseAnon, supabaseConfigurado, supabaseUrl } from "@/lib/supabase/config";
 
 const USUARIO = ["/portal", "/pago", "/factura"];
 const PERSONAL: Record<string, string[]> = { "/tesoreria": ["tesoreria"], "/bienestar": ["bienestar"], "/admin": ["administrador"] };
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
-  const s = await leer(req.cookies.get(COOKIE)?.value);
+  let res = NextResponse.next({ request: req });
+  let s: Sesion | null = null;
+
+  // Renueva la sesión de Supabase en cada petición (si caduca el access token, aquí se guarda el nuevo)
+  if (supabaseConfigurado()) {
+    const recordar = req.cookies.get(COOKIE_RECORDAR)?.value === "1";
+    const sb = createServerClient(supabaseUrl(), supabaseAnon(), {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (lista) => {
+          for (const { name, value } of lista) req.cookies.set(name, value);
+          res = NextResponse.next({ request: req });
+          for (const { name, value, options } of lista) res.cookies.set(name, value, ajustarCookie(options, recordar));
+        },
+      },
+    });
+    const { data } = await sb.auth.getClaims();
+    s = await sesionDesdeClaims(data?.claims, req.cookies.get(COOKIE_PERSONAL)?.value);
+  }
+
+  const redirigir = (url: URL) => {
+    const r = NextResponse.redirect(url);
+    for (const c of res.cookies.getAll()) r.cookies.set(c);
+    return r;
+  };
+
   if (USUARIO.some((p) => pathname.startsWith(p))) {
     // Las facturas también las ven Tesorería y el administrador
-    if (pathname.startsWith("/factura") && s?.k === "p") return NextResponse.next();
+    if (pathname.startsWith("/factura") && s?.k === "p") return res;
     if (!s || s.k !== "u") {
       const url = new URL("/ingresar", req.url);
       url.searchParams.set("siguiente", pathname + search);
-      return NextResponse.redirect(url);
+      return redirigir(url);
     }
   }
   for (const [p, roles] of Object.entries(PERSONAL)) {
     if (pathname.startsWith(p)) {
-      if (!s || s.k !== "p") return NextResponse.redirect(new URL("/personal", req.url));
-      if (!roles.includes(s.rol) && s.rol !== "administrador") return NextResponse.redirect(new URL(`/personal?error=permiso`, req.url));
+      if (!s || s.k !== "p") return redirigir(new URL("/personal", req.url));
+      if (!roles.includes(s.rol) && s.rol !== "administrador") return redirigir(new URL(`/personal?error=permiso`, req.url));
     }
   }
-  return NextResponse.next();
+  return res;
 }
 
-export const config = { matcher: ["/portal/:path*", "/pago/:path*", "/factura/:path*", "/tesoreria/:path*", "/bienestar/:path*", "/admin/:path*"] };
+// Corre en todas las páginas (no en archivos estáticos) para mantener viva la sesión de Supabase
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon\.ico|brand/|uploads/|.*\.(?:png|jpe?g|gif|svg|webp|ico|css|js|map|woff2?|txt|xml|webmanifest)$).*)"],
+};

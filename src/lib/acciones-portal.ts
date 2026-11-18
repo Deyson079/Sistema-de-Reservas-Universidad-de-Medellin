@@ -3,12 +3,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "./db";
-import { requireUsuario, hashPassword, verificarPassword, passwordValida, cerrarSesion } from "./auth";
+import { requireUsuario, passwordValida, cerrarSesion } from "./auth";
 import { crearReserva, cancelarReserva, registrarPago, ErrorReserva } from "./reservas";
 import { getConfig, esCorreoInstitucional } from "./config";
 import { inicioFranja, fechaAIso } from "./formato";
 import { guardarArchivo, validarArchivo } from "./storage";
-import { generarCodigo, verificarCodigo } from "./codigos";
+import { enviarCodigo, verificarCodigo } from "./codigos";
+import { borrarCuentaAuth, comprobarPassword, guardarCuentaAuth } from "./supabase/cuentas";
+import { supabaseAdmin } from "./supabase/servidor";
 import { enviarCorreo } from "./email";
 import { auditar } from "./auditoria";
 import type { Estado } from "./acciones-auth";
@@ -79,6 +81,7 @@ export async function actualizarDatos(_: Estado, fd: FormData): Promise<Estado> 
   }).safeParse(Object.fromEntries(fd));
   if (!r.success) return { campos: Object.fromEntries(r.error.issues.map((i) => [String(i.path[0]), i.message])) };
   await db.usuario.update({ where: { id: u.id }, data: { nombres: r.data.nombres, apellidos: r.data.apellidos, celular: r.data.celular, programa: r.data.programa || u.programa } });
+  if (r.data.nombres !== u.nombres) await guardarCuentaAuth({ authId: u.authId, correo: u.correo, meta: { k: "u", rol: u.tipo, ref: u.id, nombre: r.data.nombres } });
   revalidatePath("/portal", "layout");
   return { ok: true, tipo: "Datos actualizados." };
 }
@@ -110,10 +113,11 @@ export async function actualizarFacturacion(_: Estado, fd: FormData): Promise<Es
 export async function cambiarPassword(_: Estado, fd: FormData): Promise<Estado> {
   const u = await requireUsuario();
   const actual = String(fd.get("actual") || ""), nueva = String(fd.get("password") || ""), conf = String(fd.get("confirmar") || "");
-  if (!(await verificarPassword(actual, u.passwordHash))) return { campos: { actual: "La contraseña actual no coincide." } };
+  if (!(await comprobarPassword(u.correo, actual))) return { campos: { actual: "La contraseña actual no coincide." } };
   if (!passwordValida(nueva)) return { campos: { password: "Necesita 8 caracteres, una mayúscula y un número." } };
   if (nueva !== conf) return { campos: { confirmar: "Las contraseñas no coinciden." } };
-  await db.usuario.update({ where: { id: u.id }, data: { passwordHash: await hashPassword(nueva) } });
+  const { error } = await supabaseAdmin().auth.admin.updateUserById(u.authId!, { password: nueva });
+  if (error) return { error: "No pudimos cambiar la contraseña. Intenta de nuevo." };
   await auditar(u.correo, u.tipo, "cambiar_contrasena", "usuarios", u.id);
   return { ok: true, tipo: "Contraseña actualizada." };
 }
@@ -127,15 +131,15 @@ export async function solicitarCambioCorreo(_: Estado, fd: FormData): Promise<Es
   if (u.tipo === "comunidad" && !inst) return { campos: { nuevo: "Tu cuenta de comunidad necesita un correo institucional." } };
   if (u.tipo === "externo" && inst) return { campos: { nuevo: "Con un correo institucional debes crear una cuenta de comunidad." } };
   if (await db.usuario.findUnique({ where: { correo: nuevo } })) return { campos: { nuevo: "Ya hay una cuenta con ese correo." } };
-  const { codigo } = await generarCodigo(nuevo, "cambio_correo");
-  await enviarCorreo(nuevo, { tipo: "codigo_verificacion", nombre: u.nombres.split(" ")[0]!, codigo });
+  const env = await enviarCodigo(u.correo, "cambio_correo", nuevo);
+  if (!env.ok) return { campos: { nuevo: env.error }, valores: { nuevo } };
   return { ok: true, valores: { nuevo }, tipo: "codigo" };
 }
 
 export async function confirmarCambioCorreo(_: Estado, fd: FormData): Promise<Estado> {
   const u = await requireUsuario();
   const nuevo = String(fd.get("nuevo") || "").toLowerCase();
-  const { r, restantes } = await verificarCodigo(nuevo, "cambio_correo", String(fd.get("codigo") || ""));
+  const { r, restantes } = await verificarCodigo(nuevo, "cambio_correo", String(fd.get("codigo") || "")); // Supabase cambia el correo de la cuenta
   if (r === "incorrecto") return { error: `El código no coincide. Te quedan ${restantes} intentos.`, valores: { nuevo }, tipo: "codigo" };
   if (r !== "ok") return { error: "El código venció. Pide uno nuevo.", valores: { nuevo }, tipo: "codigo" };
   await db.usuario.update({ where: { id: u.id }, data: { correo: nuevo } });
@@ -152,12 +156,13 @@ export async function guardarPreferencias(fd: FormData) {
 
 export async function eliminarCuenta(fd: FormData) {
   const u = await requireUsuario();
-  if (!(await verificarPassword(String(fd.get("password") || ""), u.passwordHash))) redirect("/portal/perfil?" + err("La contraseña no coincide. No eliminamos la cuenta.") + "#eliminar");
+  if (!(await comprobarPassword(u.correo, String(fd.get("password") || "")))) redirect("/portal/perfil?" + err("La contraseña no coincide. No eliminamos la cuenta.") + "#eliminar");
   const activas = await db.reserva.count({ where: { usuarioId: u.id, estado: { in: ["confirmada", "pendiente_pago", "en_validacion"] } } });
   if (activas) redirect("/portal/perfil?" + err(`Tienes ${activas} reservas activas. Cancélalas antes de eliminar la cuenta.`) + "#eliminar");
-  await db.usuario.update({ where: { id: u.id }, data: { estado: "eliminado", correo: `eliminado-${u.id}@eliminado.local`, nombres: "Cuenta eliminada", apellidos: "", celular: "0000000000", documento: "0" } });
+  await db.usuario.update({ where: { id: u.id }, data: { estado: "eliminado", correo: `eliminado-${u.id}@eliminado.local`, nombres: "Cuenta eliminada", apellidos: "", celular: "0000000000", documento: "0", authId: null, passwordHash: null } });
   await auditar(u.correo, u.tipo, "eliminar_cuenta", "usuarios", u.id);
   await cerrarSesion();
+  await borrarCuentaAuth(u.authId);
   redirect("/?" + ok("Eliminamos tu cuenta y tus datos personales."));
 }
 

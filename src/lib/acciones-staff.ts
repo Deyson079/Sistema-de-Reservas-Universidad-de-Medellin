@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "./db";
-import { requirePersonal, hashPassword } from "./auth";
+import { requirePersonal } from "./auth";
+import { bloquearCuentaAuth, CuentaOcupada, guardarCuentaAuth } from "./supabase/cuentas";
 import { validarPago, rechazarPago, pagoEnCaja, cancelarReserva, ErrorReserva } from "./reservas";
 import { setConfig, type Config } from "./config";
 import { auditar } from "./auditoria";
@@ -128,8 +129,16 @@ export async function guardarPersonal(_: Estado, fd: FormData): Promise<Estado> 
   if (!id && (!password || password.length < 10)) return { campos: { password: "La contraseña temporal necesita al menos 10 caracteres." } };
   const otro = await db.personal.findUnique({ where: { correo: d.correo } });
   if (otro && otro.id !== id) return { campos: { correo: "Ya existe una cuenta del personal con ese correo." } };
-  if (id) await db.personal.update({ where: { id }, data: { ...d, ...(password ? { passwordHash: await hashPassword(password) } : {}) } });
-  else await db.personal.create({ data: { ...d, passwordHash: await hashPassword(password!) } });
+  const fila = id ? await db.personal.update({ where: { id }, data: d }) : await db.personal.create({ data: d });
+  try {
+    const authId = await guardarCuentaAuth({ authId: fila.authId, correo: d.correo, password: password || undefined, confirmado: true, meta: { k: "p", rol: d.rol, ref: fila.id, nombre: d.nombre } });
+    if (authId !== fila.authId) await db.personal.update({ where: { id: fila.id }, data: { authId } });
+  } catch (e) {
+    if (!id) await db.personal.delete({ where: { id: fila.id } });
+    if (e instanceof CuentaOcupada) return { campos: { correo: "Ese correo ya pertenece a la cuenta de un usuario." } };
+    console.error("[guardar personal]", e);
+    return { error: "No pudimos guardar la cuenta en Supabase Auth. Intenta de nuevo." };
+  }
   await auditar(a.correo, a.rol, id ? "editar_personal" : "crear_personal", "personal", id, `${d.nombre} (${d.rol})`);
   revalidatePath("/admin/usuarios");
   return { ok: true, tipo: id ? "Cuenta actualizada." : `Cuenta creada para ${d.nombre}. Comparte la contraseña temporal por un canal seguro.` };
@@ -140,6 +149,7 @@ export async function activarPersonal(fd: FormData) {
   const id = String(fd.get("id"));
   if (id === a.id) redirect(`/admin/usuarios?${q("err", "No puedes desactivar tu propia cuenta.")}`);
   const p = await db.personal.update({ where: { id }, data: { activo: fd.get("activo") === "si" } });
+  await bloquearCuentaAuth(p.authId, !p.activo);
   await auditar(a.correo, a.rol, p.activo ? "activar_personal" : "desactivar_personal", "personal", id, p.nombre);
   redirect(`/admin/usuarios?${q("ok", `${p.nombre}: cuenta ${p.activo ? "activada" : "desactivada"}.`)}`);
 }
@@ -148,6 +158,7 @@ export async function bloquearUsuario(fd: FormData) {
   const a = await requirePersonal(["administrador"]);
   const id = String(fd.get("id"));
   const u = await db.usuario.update({ where: { id }, data: { estado: fd.get("estado") === "activo" ? "activo" : "bloqueado" } });
+  await bloquearCuentaAuth(u.authId, u.estado === "bloqueado");
   await auditar(a.correo, a.rol, u.estado === "activo" ? "desbloquear_usuario" : "bloquear_usuario", "usuarios", id, u.correo);
   redirect(`/admin/usuarios?tab=usuarios&${q("ok", `${u.nombres}: ${u.estado === "activo" ? "activo" : "bloqueado"}.`)}`);
 }
