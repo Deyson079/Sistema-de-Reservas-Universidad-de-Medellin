@@ -3,7 +3,7 @@ import { CalendarPlus, List, Bell, User, Receipt, MapPin, Clock, Users, Hourglas
 import { requireUsuario } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ahora, fechaLarga, franja, inicioFranja, fechaAIso, isoAFecha, moneda, fechaHora, haceCuanto } from "@/lib/formato";
-import { vencerReservas } from "@/lib/disponibilidad";
+import { vencerReservasPeriodico } from "@/lib/disponibilidad";
 import { qrDataUrl } from "@/lib/email";
 import { Ilustracion } from "@/components/Ilustracion";
 import { ChipEstado, BadgeRol } from "@/components/ui/Chip";
@@ -18,17 +18,19 @@ export const dynamic = "force-dynamic";
 
 export default async function InicioPortal() {
   const u = await requireUsuario();
-  await vencerReservas();
+  await vencerReservasPeriodico();
   const n = ahora();
   const ext = u.tipo === "externo";
-  const proximas = await db.reserva.findMany({
-    where: { usuarioId: u.id, estado: { in: ["confirmada", "pendiente_pago", "en_validacion", "rechazada"] }, fecha: { gte: isoAFecha(n.iso) } },
-    include: { cancha: true, factura: true }, orderBy: [{ fecha: "asc" }, { horaInicio: "asc" }],
-  });
+  const [proximas, avisos] = await Promise.all([
+    db.reserva.findMany({
+      where: { usuarioId: u.id, estado: { in: ["confirmada", "pendiente_pago", "en_validacion", "rechazada"] }, fecha: { gte: isoAFecha(n.iso) } },
+      include: { cancha: true, factura: true }, orderBy: [{ fecha: "asc" }, { horaInicio: "asc" }],
+    }),
+    db.notificacion.findMany({ where: { usuarioId: u.id }, orderBy: { fecha: "desc" }, take: 4 }),
+  ]);
   const futuras = proximas.filter((r) => inicioFranja(fechaAIso(r.fecha), r.horaFin).getTime() > Date.now());
   const prox = futuras.find((r) => r.estado === "confirmada") ?? futuras[0];
   const pendientes = ext ? futuras.filter((r) => r.factura && ["pendiente_pago", "rechazada"].includes(r.estado)) : [];
-  const avisos = await db.notificacion.findMany({ where: { usuarioId: u.id }, orderBy: { fecha: "desc" }, take: 4 });
   const qr = prox && prox.estado === "confirmada" ? await qrDataUrl(prox.codigo) : null;
   const saludo = n.hora < 12 ? "Buenos días" : n.hora < 19 ? "Buenas tardes" : "Buenas noches";
 

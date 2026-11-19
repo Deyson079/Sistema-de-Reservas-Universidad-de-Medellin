@@ -3,7 +3,7 @@ import { CalendarCheck, Gauge, Wallet, Users, Ban, UserCheck, Download } from "l
 import { db } from "@/lib/db";
 import { moneda } from "@/lib/formato";
 import { estadisticas, filtrosDesde } from "@/lib/estadisticas";
-import { vencerReservas } from "@/lib/disponibilidad";
+import { vencerReservasPeriodico } from "@/lib/disponibilidad";
 import { Kpi } from "@/components/ui/Varios";
 import { FiltrosPanel } from "@/components/staff/FiltrosPanel";
 import { Barras, MapaCalor, BarrasH, Division, TablaDatos } from "@/components/graficas/Graficas";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const COLOR_ESTADO: Record<string, string> = { confirmada: "#1F7A4D", asistio: "#2B445F", no_asistio: "#B3261E", cancelada: "#7A848D", pendiente_pago: "#B26A00", en_validacion: "#2B5F8A", vencida: "#A8B0B7", rechazada: "#E06C66" };
 
 export default async function InicioBienestar({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
-  await vencerReservas();
+  await vencerReservasPeriodico();
   const f = filtrosDesde(await searchParams);
   const [e, canchas] = await Promise.all([estadisticas(f), db.cancha.findMany({ orderBy: { orden: "asc" } })]);
   const qs = new URLSearchParams({ desde: f.desde, hasta: f.hasta, ...(f.cancha ? { cancha: f.cancha } : {}), ...(f.tipoUsuario ? { tipoUsuario: f.tipoUsuario } : {}) });

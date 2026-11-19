@@ -4,7 +4,7 @@ import { requireUsuario } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getConfig } from "@/lib/config";
 import { ahora, sumarDias, fechaLarga, franja, diaCorto, isoAFecha, hora as fmtHora } from "@/lib/formato";
-import { franjasDelDia, alternativas, vencerReservas } from "@/lib/disponibilidad";
+import { disponibilidad, alternativas, vencerReservasPeriodico } from "@/lib/disponibilidad";
 import { Stepper } from "@/components/ui/Varios";
 import { Fijable } from "@/components/ui/Cliente";
 import { CuadriculaFranjas, LeyendaFranjas } from "@/components/portal/Franjas";
@@ -15,21 +15,22 @@ export const dynamic = "force-dynamic";
 export default async function Reservar({ searchParams }: { searchParams: Promise<{ cancha?: string; fecha?: string; hora?: string; sincupo?: string }> }) {
   const sp = await searchParams;
   const u = await requireUsuario();
-  await vencerReservas();
-  const cfg = await getConfig();
+  const [, cfg, canchas] = await Promise.all([vencerReservasPeriodico(), getConfig(), db.cancha.findMany({ orderBy: { orden: "asc" } })]);
   const n = ahora();
-  const canchas = await db.cancha.findMany({ orderBy: { orden: "asc" } });
   const cancha = canchas.find((c) => c.slug === sp.cancha) ?? canchas.find((c) => c.estado === "activa") ?? canchas[0]!;
   const dias = Array.from({ length: cfg.diasAnticipacion }, (_, i) => sumarDias(n.iso, i));
   const fecha = sp.fecha && dias.includes(sp.fecha) ? sp.fecha : dias.find((d) => cfg.diasServicio.includes(isoAFecha(d).getUTCDay())) ?? dias[0]!;
-  const conteos = await Promise.all(dias.map(async (d) => (await franjasDelDia(cancha.id, d, u.id)).filter((f) => f.estado === "libre").length));
-  const franjas = await franjasDelDia(cancha.id, fecha, u.id);
+  // Todas las franjas de la página (todas las canchas, todos los días) en dos consultas
+  const disp = await disponibilidad(canchas, dias, u.id, cfg);
+  const libresDe = (canchaId: string, d: string) => disp.de(canchaId, d).filter((f) => f.estado === "libre").length;
+  const conteos = dias.map((d) => libresDe(cancha.id, d));
+  const franjas = disp.de(cancha.id, fecha);
   const hSel = sp.hora ? Number(sp.hora) : undefined;
   const sel = franjas.find((f) => f.hora === hSel && f.estado === "libre") ? hSel : undefined;
   const libres = franjas.filter((f) => f.estado === "libre").length;
   const alt = libres === 0 || sp.sincupo ? await alternativas(cancha.id, fecha) : [];
   const url = (p: Record<string, string | number | undefined>) => { const q = new URLSearchParams(); const v = { cancha: cancha.slug, fecha, ...p }; for (const [k, x] of Object.entries(v)) if (x !== undefined) q.set(k, String(x)); return `/portal/reservar?${q}`; };
-  const contadoresCancha = await Promise.all(canchas.map(async (c) => (await franjasDelDia(c.id, fecha, u.id)).filter((f) => f.estado === "libre").length));
+  const contadoresCancha = canchas.map((c) => libresDe(c.id, fecha));
 
   return (
     <>

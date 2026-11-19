@@ -247,11 +247,18 @@ html{scroll-behavior:smooth;scroll-padding-top:96px}
 
 
 /* ================= Móvil ================= */
+.cab .logo{flex:none}
+.cab nav a{white-space:nowrap}
 @media (max-width:1180px){
   .hero h1{font-size:96px}
   .camino{padding:48px 40px}.camino--com{padding-right:96px}.camino--ext{padding-left:96px}
+  .cab .wrap{gap:20px}
+  .cab nav{gap:0}
+  .cab nav a{padding:0 10px;font-size:14px}
+  .cab .logo img{height:40px}
 }
-@media (max-width:760px){
+/* Celulares y tablets (hasta 1023 px): diseño de una columna con menú hamburguesa */
+@media (max-width:1023px){
   html{scroll-padding-top:72px}
   .wrap{width:calc(100% - 32px)}
   .cab .wrap{height:64px;gap:12px}

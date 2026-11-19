@@ -30,6 +30,15 @@ export async function enviarCorreo(para: string, p: Plantilla) {
   }
 }
 
-export async function qrDataUrl(texto: string) {
-  return QRCode.toDataURL(texto, { width: 360, margin: 1, color: { dark: "#16222F", light: "#FFFFFF" } });
+const qrMemo = new Map<string, Promise<string>>();
+/** QR en data URL. Se memoriza: el mismo código siempre produce la misma imagen. */
+export function qrDataUrl(texto: string): Promise<string> {
+  let q = qrMemo.get(texto);
+  if (!q) {
+    if (qrMemo.size > 500) qrMemo.clear();
+    q = QRCode.toDataURL(texto, { width: 360, margin: 1, color: { dark: "#16222F", light: "#FFFFFF" } });
+    q.catch(() => qrMemo.delete(texto));
+    qrMemo.set(texto, q);
+  }
+  return q;
 }

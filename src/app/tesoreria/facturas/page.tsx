@@ -3,7 +3,7 @@ import { Search, Download, FileSpreadsheet } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { moneda, fechaCorta, franja } from "@/lib/formato";
-import { vencerReservas } from "@/lib/disponibilidad";
+import { vencerReservasPeriodico } from "@/lib/disponibilidad";
 import { ChipFactura } from "@/components/ui/Chip";
 import { Tabs, Paginacion, Vacio } from "@/components/ui/Varios";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Facturas({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string; pagina?: string }> }) {
   const sp = await searchParams;
-  await vencerReservas();
+  await vencerReservasPeriodico();
   const tab = sp.tab ?? "sin_pagar";
   const pagina = Math.max(1, Number(sp.pagina) || 1);
   const busq: Prisma.FacturaWhereInput = sp.q ? { OR: [{ numero: { contains: sp.q, mode: "insensitive" } }, { reserva: { codigo: { contains: sp.q.toUpperCase() } } }, { reserva: { usuario: { nombres: { contains: sp.q, mode: "insensitive" } } } }, { reserva: { usuario: { facturacion: { nitCedula: { contains: sp.q } } } } }] } : {};

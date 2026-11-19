@@ -16,7 +16,7 @@ export function FormPersonal({ p }: { p?: { id: string; nombre: string; correo: 
       <Campo etiqueta="Nombre completo" name="nombre" defaultValue={p?.nombre} error={c.nombre} required />
       <Campo etiqueta="Correo institucional" name="correo" type="email" defaultValue={p?.correo} error={c.correo} required />
       <Seleccion etiqueta="Rol" name="rol" defaultValue={p?.rol ?? "tesoreria"}><option value="tesoreria">Tesorería</option><option value="bienestar">Bienestar · Deportes</option><option value="administrador">Administrador</option></Seleccion>
-      <Campo etiqueta={p ? "Nueva contraseña temporal" : "Contraseña temporal"} name="password" type="text" autoComplete="off" error={c.password} opcional={!!p} ayuda="Mínimo 10 caracteres. La persona ingresa con verificación en dos pasos." />
+      <Campo etiqueta={p ? "Nueva contraseña temporal" : "Contraseña temporal"} name="password" type="text" autoComplete="off" error={c.password} opcional={!!p} ayuda="Mínimo 10 caracteres. La persona ingresa con su correo y esta contraseña." />
       <div><BotonEnviar>{p ? "Guardar cambios" : "Crear cuenta"}</BotonEnviar></div>
     </form>
   );

@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Receipt, Pencil, TriangleAlert } from "lucide-re
 import { requireUsuario } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getConfig } from "@/lib/config";
-import { franjasDelDia } from "@/lib/disponibilidad";
+import { disponibilidad } from "@/lib/disponibilidad";
 import { Stepper } from "@/components/ui/Varios";
 import { Seleccion, Area } from "@/components/ui/Campo";
 import { ResumenReserva } from "@/components/portal/ResumenReserva";
@@ -13,12 +13,10 @@ export const metadata = { title: "Datos de la reserva" };
 
 export default async function Datos({ searchParams }: { searchParams: Promise<{ cancha?: string; fecha?: string; hora?: string; actividad?: string; participantes?: string; observaciones?: string }> }) {
   const sp = await searchParams;
-  const u = await requireUsuario();
-  const cfg = await getConfig();
-  const cancha = await db.cancha.findUnique({ where: { slug: sp.cancha ?? "" } });
+  const [u, cfg, cancha] = await Promise.all([requireUsuario(), getConfig(), db.cancha.findUnique({ where: { slug: sp.cancha ?? "" } })]);
   const hora = Number(sp.hora);
   if (!cancha || !sp.fecha || Number.isNaN(hora)) redirect("/portal/reservar");
-  const f = (await franjasDelDia(cancha.id, sp.fecha, u.id)).find((x) => x.hora === hora);
+  const f = (await disponibilidad([cancha], [sp.fecha], u.id, cfg)).de(cancha.id, sp.fecha).find((x) => x.hora === hora);
   if (!f || f.estado !== "libre") redirect(`/portal/reservar?cancha=${cancha.slug}&fecha=${sp.fecha}&err=${encodeURIComponent("Esa franja ya no está libre. Elige otra.")}`);
   const ext = u.tipo === "externo";
   const fac = u.facturacion;

@@ -4,13 +4,13 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { db } from "./db";
 import { getConfig, esCorreoInstitucional } from "./config";
-import { cerrarSesion, fijarRecordar, marcarPersonal, passwordValida } from "./auth";
+import { cerrarSesion, fijarRecordar, passwordValida } from "./auth";
 import { enviarCodigo, puedeReenviar, verificarCodigo } from "./codigos";
 import { enviarCorreo } from "./email";
 import { guardarArchivo, validarArchivo } from "./storage";
 import { auditar } from "./auditoria";
 import { firmar, leer } from "./sesion-token";
-import { comprobarPassword, CuentaOcupada, guardarCuentaAuth } from "./supabase/cuentas";
+import { CuentaOcupada, guardarCuentaAuth } from "./supabase/cuentas";
 import { supabaseServidor } from "./supabase/servidor";
 
 export type Estado = { error?: string; campos?: Record<string, string>; valores?: Record<string, string>; ok?: boolean; tipo?: string; espera?: number; redir?: string } | undefined;
@@ -175,7 +175,7 @@ export async function ingresar(_: Estado, fd: FormData): Promise<Estado> {
     }
     return { tipo: "credenciales", error: "El correo o la contraseña no coinciden. Revisa e intenta de nuevo.", valores };
   };
-  // Solo cuentas de usuarios: el personal entra por /personal con doble factor
+  // Solo cuentas de usuarios: el personal entra por /personal
   if (!u || u.estado === "eliminado" || !u.authId) return fallo();
   await fijarRecordar(recordar);
   const sb = await supabaseServidor({ recordar });
@@ -245,35 +245,27 @@ export async function recuperarPaso3(_: Estado, fd: FormData): Promise<Estado> {
 export async function ingresarPersonal(_: Estado, fd: FormData): Promise<Estado> {
   const correo = String(fd.get("correo") || "").trim().toLowerCase();
   const password = String(fd.get("password") || "");
+  const valores = { correo };
+  const fallo = async (): Promise<Estado> => {
+    await auditar(correo || "desconocido", "desconocido", "ingreso_fallido", "personal");
+    return { error: "El correo o la contraseña no coinciden.", valores };
+  };
+  if (!correo || !password) return { error: "Escribe tu correo y tu contraseña.", valores };
   const p = await db.personal.findUnique({ where: { correo } });
-  if (!p || !p.activo || !p.authId || !(await comprobarPassword(correo, password))) {
-    await auditar(correo, "desconocido", "ingreso_fallido", "personal");
-    return { error: "El correo o la contraseña no coinciden.", valores: { correo } };
-  }
-  const env = await enviarCodigo(correo, "doble_factor");
-  if (!env.ok) return { error: env.error, valores: { correo } };
-  (await cookies()).set("udem_2fa", await firmar({ sub: p.id, k: "p", rol: p.rol, nombre: p.nombre }, 1), { httpOnly: true, sameSite: "lax", path: "/personal", maxAge: 600, secure: seguro() });
-  redirect("/personal/verificar");
-}
-
-export async function verificarPersonal(_: Estado, fd: FormData): Promise<Estado> {
-  const t = await leer((await cookies()).get("udem_2fa")?.value);
-  if (!t) return { error: "La verificación venció. Ingresa de nuevo.", tipo: "vencido" };
-  const p = await db.personal.findUnique({ where: { id: t.sub } });
-  if (!p || !p.activo) return { error: "Cuenta no encontrada.", tipo: "vencido" };
-  const codigo = String(fd.get("codigo") || "");
+  if (!p || !p.activo || !p.authId) return fallo();
+  // La sesión del personal no se recuerda: termina al cerrar el navegador
   await fijarRecordar(false);
-  const { r, restantes, session, user } = await verificarCodigo(p.correo, "doble_factor", codigo);
-  if (r === "incorrecto") return { error: `El código no coincide. Te quedan ${restantes} intentos.`, tipo: "incorrecto" };
-  if (r !== "ok" || !session || !user) return { error: "El código venció. Ingresa de nuevo para recibir otro.", tipo: "vencido" };
-  if ((user.app_metadata as { k?: string }).k !== "p" || user.id !== p.authId) {
-    await cerrarSesion();
-    return { error: "Esta cuenta no pertenece al personal.", tipo: "vencido" };
+  const sb = await supabaseServidor({ recordar: false });
+  const { data, error } = await sb.auth.signInWithPassword({ email: correo, password });
+  if (error || !data.user) return fallo();
+  if ((data.user.app_metadata as { k?: string }).k !== "p" || data.user.id !== p.authId) {
+    await sb.auth.signOut({ scope: "local" });
+    return fallo();
   }
-  await marcarPersonal(session.access_token, p);
-  (await cookies()).delete({ name: "udem_2fa", path: "/personal" });
-  await db.personal.update({ where: { id: p.id }, data: { ultimoIngreso: new Date() } });
-  await auditar(p.correo, p.rol, "ingreso", "personal", p.id);
+  await Promise.all([
+    db.personal.update({ where: { id: p.id }, data: { ultimoIngreso: new Date() } }),
+    auditar(p.correo, p.rol, "ingreso", "personal", p.id),
+  ]);
   redirect(p.rol === "tesoreria" ? "/tesoreria" : p.rol === "bienestar" ? "/bienestar" : "/admin");
 }
 

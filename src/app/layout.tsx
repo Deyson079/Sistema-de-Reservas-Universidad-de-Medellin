@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import "@fontsource/barlow-condensed/600.css";
-import "@fontsource/barlow-condensed/700.css";
-import "@fontsource/barlow-condensed/800.css";
-import "@fontsource/open-sans/400.css";
-import "@fontsource/open-sans/600.css";
-import "@fontsource/open-sans/700.css";
+// Solo el subconjunto latino (cubre español: tildes, ñ, ¿¡): CSS más liviano que cargar los 9 alfabetos
+import "@fontsource/barlow-condensed/latin-600.css";
+import "@fontsource/barlow-condensed/latin-700.css";
+import "@fontsource/barlow-condensed/latin-800.css";
+import "@fontsource/open-sans/latin-400.css";
+import "@fontsource/open-sans/latin-600.css";
+import "@fontsource/open-sans/latin-700.css";
 import "./globals.css";
 import { BannerCookies, ToastUrl } from "@/components/ui/Cliente";
 

@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { requireUsuario } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ahora, isoAFecha } from "@/lib/formato";
-import { vencerReservas } from "@/lib/disponibilidad";
+import { vencerReservasPeriodico } from "@/lib/disponibilidad";
 import { Tabs, Vacio, Paginacion } from "@/components/ui/Varios";
 import { TarjetaReserva } from "@/components/portal/TarjetaReserva";
 
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function MisReservas({ searchParams }: { searchParams: Promise<{ tab?: string; cancha?: string; q?: string; pagina?: string }> }) {
   const sp = await searchParams;
   const u = await requireUsuario();
-  await vencerReservas();
+  await vencerReservasPeriodico();
   const hoy = isoAFecha(ahora().iso);
   const tab = sp.tab ?? "proximas";
   const base: Prisma.ReservaWhereInput = { usuarioId: u.id, ...(sp.cancha ? { cancha: { slug: sp.cancha } } : {}), ...(sp.q ? { codigo: { contains: sp.q.toUpperCase() } } : {}) };

@@ -4,7 +4,7 @@ Plataforma web para reservar las canchas polideportivas de la Universidad de Med
 
 - **Comunidad Universidad de Medellín** (correos `@udemedellin.edu.co` y `@soyudemedellin.edu.co`): no paga, y su reserva queda confirmada al instante.
 - **Externos** (personas naturales o empresas): pagan por hora. El horario queda apartado 48 horas mientras Tesorería valida el pago.
-- **Personal**: Tesorería, Bienestar Universitario · Deportes y Administrador, con acceso separado y verificación en dos pasos.
+- **Personal**: Tesorería, Bienestar Universitario · Deportes y Administrador, con acceso separado (correo y contraseña).
 
 ## Tecnología
 

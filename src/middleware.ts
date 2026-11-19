@@ -1,18 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { COOKIE_PERSONAL, sesionDesdeClaims, type Sesion } from "@/lib/sesion-token";
+import { sesionDesdeClaims, type Sesion } from "@/lib/sesion";
 import { ajustarCookie, COOKIE_RECORDAR, supabaseAnon, supabaseConfigurado, supabaseUrl } from "@/lib/supabase/config";
 
 const USUARIO = ["/portal", "/pago", "/factura"];
 const PERSONAL: Record<string, string[]> = { "/tesoreria": ["tesoreria"], "/bienestar": ["bienestar"], "/admin": ["administrador"] };
+
+/** Cookies de sesión de Supabase: sb-<proyecto>-auth-token (puede venir partida en .0, .1…) */
+const tieneCookieSesion = (req: NextRequest) => req.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   let res = NextResponse.next({ request: req });
   let s: Sesion | null = null;
 
-  // Renueva la sesión de Supabase en cada petición (si caduca el access token, aquí se guarda el nuevo)
-  if (supabaseConfigurado()) {
+  // Renueva la sesión de Supabase (si caduca el access token, aquí se guarda el nuevo).
+  // Sin cookies de sesión no hay nada que renovar: los visitantes anónimos no pasan por Supabase.
+  if (supabaseConfigurado() && tieneCookieSesion(req)) {
     const recordar = req.cookies.get(COOKIE_RECORDAR)?.value === "1";
     const sb = createServerClient(supabaseUrl(), supabaseAnon(), {
       cookies: {
@@ -25,7 +29,7 @@ export async function middleware(req: NextRequest) {
       },
     });
     const { data } = await sb.auth.getClaims();
-    s = await sesionDesdeClaims(data?.claims, req.cookies.get(COOKIE_PERSONAL)?.value);
+    s = sesionDesdeClaims(data?.claims);
   }
 
   const redirigir = (url: URL) => {
@@ -49,10 +53,12 @@ export async function middleware(req: NextRequest) {
       if (!roles.includes(s.rol) && s.rol !== "administrador") return redirigir(new URL(`/personal?error=permiso`, req.url));
     }
   }
+  // La antigua marca del doble factor ya no se usa
+  if (req.cookies.has("udem_personal")) res.cookies.delete("udem_personal");
   return res;
 }
 
 // Corre en todas las páginas (no en archivos estáticos) para mantener viva la sesión de Supabase
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon\.ico|brand/|uploads/|.*\.(?:png|jpe?g|gif|svg|webp|ico|css|js|map|woff2?|txt|xml|webmanifest)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|brand/|uploads/|.*\\.(?:png|jpe?g|gif|svg|webp|ico|css|js|map|woff2?|txt|xml|webmanifest|pdf)$).*)"],
 };

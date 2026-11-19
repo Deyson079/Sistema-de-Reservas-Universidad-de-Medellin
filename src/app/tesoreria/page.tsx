@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Hourglass, CircleCheck, Wallet, Receipt, TriangleAlert, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { ahora, sumarDias, isoAFecha, moneda, fechaCorta, fechaLarga, haceCuanto } from "@/lib/formato";
-import { vencerReservas } from "@/lib/disponibilidad";
+import { vencerReservasPeriodico } from "@/lib/disponibilidad";
 import { METODOS } from "@/lib/estados";
 import { Kpi } from "@/components/ui/Varios";
 import { ChipPago } from "@/components/ui/Chip";
@@ -11,7 +11,7 @@ import { LineaArea, BarrasH, TablaDatos } from "@/components/graficas/Graficas";
 export const dynamic = "force-dynamic";
 
 export default async function InicioTesoreria() {
-  await vencerReservas();
+  await vencerReservasPeriodico();
   const n = ahora();
   const inicioHoy = new Date(isoAFecha(n.iso).getTime() + 5 * 3600_000);
   const inicioMes = new Date(Date.UTC(Number(n.iso.slice(0, 4)), Number(n.iso.slice(5, 7)) - 1, 1, 5));

@@ -20,8 +20,7 @@ export default function AccesoPersonal() {
         {e?.error && <div className="error-general"><CircleX className="i" /><span>{e.error}</span></div>}
         <div className="campo"><label htmlFor="correo">Correo institucional</label><div className="control"><Mail className="i" /><input id="correo" name="correo" type="email" className="input" defaultValue={e?.valores?.correo} autoComplete="username" required style={{ paddingLeft: 42 }} /></div></div>
         <CampoPassword />
-        <BotonEnviar className="btn btn-secundario btn-lg ancho">Continuar</BotonEnviar>
-        <p className="mini texto-2 centrado" style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}><ShieldCheck className="i i-sm" />Verificación en dos pasos: te enviaremos un código a tu correo.</p>
+        <BotonEnviar className="btn btn-secundario btn-lg ancho">Ingresar</BotonEnviar>
       </form>
       {process.env.NEXT_PUBLIC_MODO_DEMO === "true" && (
         <div className="demo"><b>Cuentas de prueba del personal</b>{DEMO.map(([c, t]) => <button key={c} type="button" onClick={() => llenar(c)}>{t}<span>{c}</span></button>)}<span className="mini texto-2">Contraseña: Cancha2026*</span></div>

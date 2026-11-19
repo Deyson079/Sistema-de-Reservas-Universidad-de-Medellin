@@ -19,9 +19,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DetalleReserva({ params }: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await params;
-  const u = await requireUsuario();
-  const cfg = await getConfig();
-  const r = await db.reserva.findUnique({ where: { codigo }, include: { cancha: true, factura: { include: { pagos: { include: { validadoPor: true }, orderBy: { fecha: "desc" } } } } } });
+  const [u, cfg, r] = await Promise.all([requireUsuario(), getConfig(), db.reserva.findUnique({ where: { codigo }, include: { cancha: true, factura: { include: { pagos: { include: { validadoPor: true }, orderBy: { fecha: "desc" } } } } } })]);
   if (!r || r.usuarioId !== u.id) notFound();
   const inicio = inicioFranja(fechaAIso(r.fecha), r.horaInicio);
   const cancelable = ["confirmada", "pendiente_pago", "en_validacion"].includes(r.estado) && inicio.getTime() > Date.now();

@@ -32,7 +32,7 @@ function errorEnvio(e: { status?: number; code?: string; message: string }): Res
  * Pide a Supabase un código para `correo`.
  * - registro: confirma el correo de una cuenta nueva (plantilla "Confirm signup").
  * - recuperacion: cambio de contraseña (plantilla "Reset Password").
- * - doble_factor: segundo paso del personal (plantilla "Magic Link").
+ * - doble_factor: ya no se usa (el personal ingresa solo con contraseña); se conserva por el enum de la base de datos.
  * - cambio_correo: confirma el correo nuevo `nuevo` del usuario con sesión (plantilla "Change Email Address").
  */
 export async function enviarCodigo(correo: string, tipo: TipoCodigo, nuevo?: string): Promise<ResultadoEnvio> {

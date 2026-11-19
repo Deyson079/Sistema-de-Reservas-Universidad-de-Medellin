@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "./db";
 
 export type Config = {
@@ -42,7 +43,8 @@ export const CONFIG_POR_DEFECTO: Config = {
   nitUniversidad: "890.902.920-1",
 };
 
-export async function getConfig(): Promise<Config> {
+/** Configuración del sistema. `cache` la lee una sola vez por petición aunque la pidan layout, página y componentes. */
+export const getConfig = cache(async (): Promise<Config> => {
   try {
     const filas = await db.configuracion.findMany();
     const c: Record<string, unknown> = { ...CONFIG_POR_DEFECTO };
@@ -51,7 +53,7 @@ export async function getConfig(): Promise<Config> {
   } catch {
     return CONFIG_POR_DEFECTO;
   }
-}
+});
 
 export async function setConfig(clave: keyof Config, valor: unknown) {
   await db.configuracion.upsert({

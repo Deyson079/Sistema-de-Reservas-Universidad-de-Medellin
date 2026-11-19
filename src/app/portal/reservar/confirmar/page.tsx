@@ -13,9 +13,7 @@ export const metadata = { title: "Confirmar reserva" };
 
 export default async function Confirmar({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
-  const u = await requireUsuario();
-  const cfg = await getConfig();
-  const cancha = await db.cancha.findUnique({ where: { slug: sp.cancha ?? "" } });
+  const [u, cfg, cancha] = await Promise.all([requireUsuario(), getConfig(), db.cancha.findUnique({ where: { slug: sp.cancha ?? "" } })]);
   const hora = Number(sp.hora);
   if (!cancha || !sp.fecha || Number.isNaN(hora)) redirect("/portal/reservar");
   const ext = u.tipo === "externo";

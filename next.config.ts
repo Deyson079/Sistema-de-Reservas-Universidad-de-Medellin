@@ -9,6 +9,18 @@ const nextConfig: NextConfig = {
     "/**": ["./node_modules/.prisma/client/**/*"],
   },
   experimental: { serverActions: { bodySizeLimit: "6mb" } },
+  poweredByHeader: false,
+  compress: true,
+  // Logos y escudos casi nunca cambian: el navegador los guarda una semana y los revalida en segundo plano
+  // La verificación en dos pasos del personal se retiró: los enlaces antiguos vuelven al ingreso
+  async redirects() {
+    return [{ source: "/personal/verificar", destination: "/personal", permanent: false }];
+  },
+  async headers() {
+    return [
+      { source: "/brand/:archivo*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },
+    ];
+  },
 };
 
 export default nextConfig;

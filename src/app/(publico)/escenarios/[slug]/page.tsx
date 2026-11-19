@@ -3,25 +3,33 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Users, Ruler, MapPin, CircleCheck, CalendarPlus, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
 import { ahora, fechaLarga, moneda, fechaHora } from "@/lib/formato";
-import { franjasDelDia } from "@/lib/disponibilidad";
+import { cache } from "react";
+import { disponibilidad } from "@/lib/disponibilidad";
 import { Ilustracion } from "@/components/Ilustracion";
 import { ChipEstado, BadgeRol } from "@/components/ui/Chip";
 import { CuadriculaFranjas, LeyendaFranjas } from "@/components/portal/Franjas";
 
 export const dynamic = "force-dynamic";
 
+// Metadatos y página comparten la misma consulta en cada petición
+const canchaPorSlug = cache((slug: string) =>
+  db.cancha.findUnique({ where: { slug }, include: { bloqueos: { where: { hasta: { gte: new Date() } }, orderBy: { desde: "asc" }, take: 3 } } }));
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const c = await db.cancha.findUnique({ where: { slug: (await params).slug } });
+  const c = await canchaPorSlug((await params).slug);
   return { title: c?.nombre ?? "Escenario" };
 }
 
 export default async function Escenario({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const c = await db.cancha.findUnique({ where: { slug }, include: { bloqueos: { where: { hasta: { gte: new Date() } }, orderBy: { desde: "asc" }, take: 3 } } });
+  const c = await canchaPorSlug(slug);
   if (!c) notFound();
   const hoy = ahora().iso;
-  const franjas = await franjasDelDia(c.id, hoy);
-  const otras = await db.cancha.findMany({ where: { id: { not: c.id } }, orderBy: { orden: "asc" } });
+  const [disp, otras] = await Promise.all([
+    disponibilidad([c], [hoy]),
+    db.cancha.findMany({ where: { id: { not: c.id } }, orderBy: { orden: "asc" } }),
+  ]);
+  const franjas = disp.de(c.id, hoy);
   const pos: Record<string, [number, number]> = { "coliseo-cubierto": [180, 110], "cancha-sintetica": [330, 70], "placa-polideportiva-1": [210, 160], "cancha-de-voleibol": [360, 150] };
   const [px, py] = pos[c.slug] ?? [260, 120];
   return (

@@ -2,7 +2,7 @@ import { FlaskConical } from "lucide-react";
 import { codigosDemo } from "@/lib/codigos";
 
 /** Solo en modo de pruebas (EMAIL_MODO distinto de "smtp"): muestra el código que se habría enviado por correo */
-export function CodigoDemo({ correo, tipo }: { correo: string; tipo: "registro" | "recuperacion" | "doble_factor" }) {
+export function CodigoDemo({ correo, tipo }: { correo: string; tipo: "registro" | "recuperacion" }) {
   if (process.env.EMAIL_MODO === "smtp") return null;
   const c = codigosDemo.get(`${tipo}:${correo.toLowerCase()}`);
   if (!c) return null;
