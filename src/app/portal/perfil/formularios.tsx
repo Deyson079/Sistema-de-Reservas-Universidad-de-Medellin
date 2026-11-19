@@ -1,10 +1,10 @@
 "use client";
 import { useActionState } from "react";
 import { CircleCheck, CircleX, User, Building2 } from "lucide-react";
-import { actualizarDatos, actualizarFacturacion, cambiarPassword, solicitarCambioCorreo, confirmarCambioCorreo } from "@/lib/acciones-portal";
+import { actualizarDatos, actualizarFacturacion, cambiarPassword, cambiarCorreo } from "@/lib/acciones-portal";
 import type { Estado } from "@/lib/acciones-auth";
 import { Campo } from "@/components/ui/Campo";
-import { BotonEnviar, CampoPassword, CodigoSeis, ZonaArchivo } from "@/components/ui/Cliente";
+import { BotonEnviar, CampoPassword, ZonaArchivo } from "@/components/ui/Cliente";
 
 const Ok = ({ e }: { e: Estado }) => e?.ok && e.tipo && e.tipo !== "codigo" ? <div className="aviso aviso--exito" role="status"><CircleCheck className="i" /><span>{e.tipo}</span></div> : e?.error ? <div className="aviso aviso--error"><CircleX className="i" /><span>{e.error}</span></div> : null;
 
@@ -63,26 +63,16 @@ export function FormPassword() {
   );
 }
 
-export function FormCorreo({ actual, demo }: { actual: string; demo?: string }) {
-  const [e1, pedir] = useActionState<Estado, FormData>(solicitarCambioCorreo, undefined);
-  const [e2, confirmar] = useActionState<Estado, FormData>(confirmarCambioCorreo, undefined);
-  if (e2?.ok) return <Ok e={e2} />;
-  const nuevo = e1?.valores?.nuevo ?? e2?.valores?.nuevo;
-  if (nuevo && (e1?.tipo === "codigo" || e2?.tipo === "codigo")) return (
-    <form action={confirmar} className="form">
-      <input type="hidden" name="nuevo" value={nuevo} />
-      <p className="chico" style={{ margin: 0 }}>Escribe el código que enviamos a <b>{nuevo}</b>.</p>
-      {demo && <div className="aviso aviso--demo">Modo de pruebas: el código aparece en la terminal del servidor.</div>}
-      <CodigoSeis estado={e2?.error ? "error" : undefined} />
-      <Ok e={e2} />
-      <div><BotonEnviar>Confirmar nuevo correo</BotonEnviar></div>
-    </form>
-  );
+export function FormCorreo({ actual }: { actual: string; demo?: string }) {
+  const [e, accion] = useActionState<Estado, FormData>(cambiarCorreo, undefined);
+  if (e?.ok) return <Ok e={e} />;
   return (
-    <form action={pedir} className="form">
+    <form action={accion} className="form">
       <Campo etiqueta="Correo actual" name="actual" defaultValue={actual} disabled />
-      <Campo etiqueta="Nuevo correo" name="nuevo" type="email" error={e1?.campos?.nuevo} required />
-      <div><BotonEnviar className="btn btn-secundario">Enviar código de verificación</BotonEnviar></div>
+      <Campo etiqueta="Nuevo correo" name="nuevo" type="email" defaultValue={e?.valores?.nuevo} error={e?.campos?.nuevo} required autoComplete="email" />
+      <CampoPassword name="password" id="password-correo" etiqueta="Tu contraseña actual" autoComplete="current-password" error={e?.campos?.password} />
+      {e?.error && <Ok e={e} />}
+      <div><BotonEnviar className="btn btn-secundario">Cambiar correo</BotonEnviar></div>
     </form>
   );
 }

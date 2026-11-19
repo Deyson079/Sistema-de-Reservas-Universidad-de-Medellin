@@ -8,7 +8,7 @@ import { Tabs, Paginacion } from "@/components/ui/Varios";
 import { Avatar } from "@/components/ui/Avatar";
 import { BadgeRol, ChipEstado } from "@/components/ui/Chip";
 import { BotonEnviar } from "@/components/ui/Cliente";
-import { FormPersonal } from "./formulario";
+import { FormPersonal, RestablecerPassword } from "./formulario";
 
 export const dynamic = "force-dynamic";
 
@@ -65,13 +65,13 @@ async function UsuariosReg({ q, pagina }: { q?: string; pagina: number }) {
         <thead><tr><th>Usuario</th><th>Tipo</th><th>Documento</th><th>Registro</th><th className="num">Reservas</th><th>Estado</th><th /></tr></thead>
         <tbody>{us.map((u) => (
           <tr key={u.id}>
-            <td data-label="Usuario" className="full"><div className="persona"><Avatar nombre={`${u.nombres} ${u.apellidos}`} tipo={u.tipo} tam="sm" /><div><b style={{ fontWeight: 600 }}>{u.nombres} {u.apellidos}</b><small>{u.correo}{!u.correoVerificado && " · sin verificar"}</small></div></div></td>
+            <td data-label="Usuario" className="full"><div className="persona"><Avatar nombre={`${u.nombres} ${u.apellidos}`} tipo={u.tipo} tam="sm" /><div><b style={{ fontWeight: 600 }}>{u.nombres} {u.apellidos}</b><small>{u.correo}</small></div></div></td>
             <td data-label="Tipo"><BadgeRol tipo={u.tipo} texto={u.tipo === "comunidad" ? ROLES_USUARIO[u.rol] : "Externo"} /></td>
             <td data-label="Documento">{u.tipoDocumento} {u.documento}</td>
             <td data-label="Registro">{fechaCorta(u.creadoEn)}</td>
             <td className="num" data-label="Reservas">{u._count.reservas}</td>
             <td data-label="Estado">{u.estado === "activo" ? <ChipEstado estado="confirmada" texto="Activo" /> : <ChipEstado estado="rechazada" texto="Bloqueado" />}</td>
-            <td data-label="" className="full"><form action={bloquearUsuario} style={{ display: "flex", justifyContent: "flex-end" }}><input type="hidden" name="id" value={u.id} /><input type="hidden" name="estado" value={u.estado === "activo" ? "bloqueado" : "activo"} /><BotonEnviar className="btn btn-fantasma btn-sm">{u.estado === "activo" ? "Bloquear" : "Desbloquear"}</BotonEnviar></form></td>
+            <td data-label="" className="full"><div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{u.authId && <RestablecerPassword id={u.id} nombre={u.nombres} />}<form action={bloquearUsuario}><input type="hidden" name="id" value={u.id} /><input type="hidden" name="estado" value={u.estado === "activo" ? "bloqueado" : "activo"} /><BotonEnviar className="btn btn-fantasma btn-sm">{u.estado === "activo" ? "Bloquear" : "Desbloquear"}</BotonEnviar></form></div></td>
           </tr>
         ))}</tbody>
       </table></div>

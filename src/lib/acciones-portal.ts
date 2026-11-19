@@ -8,8 +8,7 @@ import { crearReserva, cancelarReserva, registrarPago, ErrorReserva } from "./re
 import { getConfig, esCorreoInstitucional } from "./config";
 import { inicioFranja, fechaAIso } from "./formato";
 import { guardarArchivo, validarArchivo } from "./storage";
-import { enviarCodigo, verificarCodigo } from "./codigos";
-import { borrarCuentaAuth, comprobarPassword, guardarCuentaAuth } from "./supabase/cuentas";
+import { borrarCuentaAuth, comprobarPassword, CuentaOcupada, guardarCuentaAuth } from "./supabase/cuentas";
 import { supabaseAdmin } from "./supabase/servidor";
 import { enviarCorreo } from "./email";
 import { auditar } from "./auditoria";
@@ -122,27 +121,27 @@ export async function cambiarPassword(_: Estado, fd: FormData): Promise<Estado> 
   return { ok: true, tipo: "Contraseña actualizada." };
 }
 
-export async function solicitarCambioCorreo(_: Estado, fd: FormData): Promise<Estado> {
+/** Cambia el correo de la cuenta al instante (sin código por correo); se confirma con la contraseña actual. */
+export async function cambiarCorreo(_: Estado, fd: FormData): Promise<Estado> {
   const u = await requireUsuario();
   const nuevo = String(fd.get("nuevo") || "").trim().toLowerCase();
-  if (!z.string().email().safeParse(nuevo).success) return { campos: { nuevo: "Escribe un correo válido." } };
+  const valores = { nuevo };
+  if (!z.string().email().safeParse(nuevo).success) return { campos: { nuevo: "Escribe un correo válido." }, valores };
+  if (nuevo === u.correo) return { campos: { nuevo: "Ese ya es tu correo actual." }, valores };
   const cfg = await getConfig();
   const inst = esCorreoInstitucional(nuevo, cfg.dominios);
-  if (u.tipo === "comunidad" && !inst) return { campos: { nuevo: "Tu cuenta de comunidad necesita un correo institucional." } };
-  if (u.tipo === "externo" && inst) return { campos: { nuevo: "Con un correo institucional debes crear una cuenta de comunidad." } };
-  if (await db.usuario.findUnique({ where: { correo: nuevo } })) return { campos: { nuevo: "Ya hay una cuenta con ese correo." } };
-  const env = await enviarCodigo(u.correo, "cambio_correo", nuevo);
-  if (!env.ok) return { campos: { nuevo: env.error }, valores: { nuevo } };
-  return { ok: true, valores: { nuevo }, tipo: "codigo" };
-}
-
-export async function confirmarCambioCorreo(_: Estado, fd: FormData): Promise<Estado> {
-  const u = await requireUsuario();
-  const nuevo = String(fd.get("nuevo") || "").toLowerCase();
-  const { r, restantes } = await verificarCodigo(nuevo, "cambio_correo", String(fd.get("codigo") || "")); // Supabase cambia el correo de la cuenta
-  if (r === "incorrecto") return { error: `El código no coincide. Te quedan ${restantes} intentos.`, valores: { nuevo }, tipo: "codigo" };
-  if (r !== "ok") return { error: "El código venció. Pide uno nuevo.", valores: { nuevo }, tipo: "codigo" };
-  await db.usuario.update({ where: { id: u.id }, data: { correo: nuevo } });
+  if (u.tipo === "comunidad" && !inst) return { campos: { nuevo: "Tu cuenta de comunidad necesita un correo institucional." }, valores };
+  if (u.tipo === "externo" && inst) return { campos: { nuevo: "Con un correo institucional debes crear una cuenta de comunidad." }, valores };
+  if (!(await comprobarPassword(u.correo, String(fd.get("password") || "")))) return { campos: { password: "La contraseña no coincide." }, valores };
+  if (await db.usuario.findUnique({ where: { correo: nuevo } })) return { campos: { nuevo: "Ya hay una cuenta con ese correo." }, valores };
+  try {
+    await guardarCuentaAuth({ authId: u.authId, correo: nuevo, confirmado: true, meta: { k: "u", rol: u.tipo, ref: u.id, nombre: u.nombres } });
+  } catch (e) {
+    if (e instanceof CuentaOcupada) return { campos: { nuevo: "Ya hay una cuenta con ese correo." }, valores };
+    console.error("[cambiar correo]", e);
+    return { error: "No pudimos cambiar el correo. Intenta de nuevo.", valores };
+  }
+  await db.usuario.update({ where: { id: u.id }, data: { correo: nuevo, correoVerificado: true } });
   await auditar(nuevo, u.tipo, "cambiar_correo", "usuarios", u.id, `Antes: ${u.correo}`);
   revalidatePath("/portal", "layout");
   return { ok: true, tipo: "Correo actualizado." };

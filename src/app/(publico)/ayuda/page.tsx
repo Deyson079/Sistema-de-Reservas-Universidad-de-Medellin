@@ -10,9 +10,8 @@ export default async function Ayuda() {
   const grupos = [
     { titulo: "Cuenta y registro", preguntas: [
       ["¿Qué cuenta debo crear?", `Si tienes correo ${c.dominios.map((d) => "@" + d).join(" o ")}, crea una cuenta de comunidad: no pagas y tus reservas se confirman al instante. Con cualquier otro correo, crea una cuenta de externo.`],
-      ["No me llegó el código de verificación", "Revisa la carpeta de spam o correo no deseado. Puedes pedir un código nuevo después de 60 segundos; cada código vence en 10 minutos."],
-      ["Olvidé mi contraseña", "En Ingresar, elige «¿Olvidaste tu contraseña?». Te enviamos un código de 6 dígitos para crear una nueva."],
-      ["Bloquearon mi cuenta", "Después de 5 intentos fallidos bloqueamos la cuenta 15 minutos por seguridad. Espera o cambia tu contraseña."],
+      ["Olvidé mi contraseña", `Escribe a ${c.contacto.correo} o llama al ${c.contacto.telefono} desde el correo o el celular de tu cuenta. Te asignamos una contraseña temporal; después cámbiala en Mi perfil.`],
+      ["Bloquearon mi cuenta", "Después de 5 intentos fallidos bloqueamos la cuenta 15 minutos por seguridad. Espera e intenta de nuevo; si olvidaste la contraseña, pide una temporal."],
     ] as Array<[string, string]> },
     { titulo: "Reservas", preguntas: [
       ["¿Con cuánta anticipación puedo reservar?", `Hasta ${c.diasAnticipacion} días antes, en franjas de 1 hora, y hasta ${c.maxFranjasDia} franjas por día.`],

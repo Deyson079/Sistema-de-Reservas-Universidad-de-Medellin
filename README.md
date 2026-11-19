@@ -21,13 +21,13 @@ Plataforma web para reservar las canchas polideportivas de la Universidad de Med
 
 ```bash
 npm install
-cp .env.example .env          # completa DATABASE_URL, DIRECT_URL y AUTH_SECRET
+cp .env.example .env          # completa DATABASE_URL, DIRECT_URL y las claves de Supabase
 npx prisma migrate deploy     # crea las tablas
 npm run db:seed               # configuración, canchas, personal y datos de demostración
 npm run dev                   # http://localhost:3000
 ```
 
-Con `EMAIL_MODO="consola"` los correos no se envían: los códigos de verificación aparecen en pantalla, en un aviso amarillo de «Modo de pruebas», y también en la terminal.
+Con `EMAIL_MODO="consola"` los correos no se envían: se muestran en la terminal.
 
 ### Cuentas de prueba (contraseña `Cancha2026*`)
 
@@ -60,7 +60,7 @@ Con `EMAIL_MODO="consola"` los correos no se envían: los códigos de verificaci
 ## Desplegar en Vercel
 
 1. Importa el repositorio en [vercel.com/new](https://vercel.com/new).
-2. Agrega las variables de `.env.example`. En producción usa `EMAIL_MODO=smtp`, `MODO_DEMO=false`, `NEXT_PUBLIC_MODO_DEMO=false`, un `AUTH_SECRET` nuevo (`openssl rand -base64 32`) y un `CRON_SECRET`.
+2. Agrega las variables de `.env.example`. En producción usa `EMAIL_MODO=smtp`, `MODO_DEMO=false`, `NEXT_PUBLIC_MODO_DEMO=false` y un `CRON_SECRET`.
 3. `vercel.json` programa `/api/cron` una vez al día, a las 7:00 a. m. de Bogotá. Esa tarea vence las reservas sin pago y envía los recordatorios de las reservas del día siguiente. Las reservas también se vencen automáticamente cada vez que alguien consulta la disponibilidad.
 
 ## Mockups en Figma
@@ -80,7 +80,7 @@ Para organizar las páginas de Figma: 00 Portada · 01 Design System · 02 Públ
 | Bloque | Rutas |
 |---|---|
 | Públicas | `/` · `/escenarios` · `/escenarios/[slug]` · `/ayuda` · `/reglamento` · `/terminos` |
-| Autenticación | `/registro` · `/registro/comunidad` · `/registro/externo` · `/verificar` · `/ingresar` · `/recuperar` → `/codigo` → `/nueva` → `/listo` · `/personal` · `/personal/verificar` |
+| Autenticación | `/registro` · `/registro/comunidad` · `/registro/externo` · `/ingresar` · `/personal` |
 | Portal | `/portal` · `/portal/reservar` → `/datos` → `/confirmar` · `/portal/reservas/[codigo]/lista` · `/portal/reservas` · `/portal/reservas/[codigo]` · `/portal/avisos` · `/portal/perfil` · `/portal/pagos` |
 | Pasarela | `/pago/[id]` · `/metodo` · `/tarjeta` · `/pse` · `/billetera` · `/transferencia` · `/procesando` · `/resultado` · `/comprobante` · `/factura/[numero]` |
 | Tesorería | `/tesoreria` · `/tesoreria/pagos` (drawer con comprobante) · `/tesoreria/caja` · `/tesoreria/facturas` · `/tesoreria/facturas/[numero]` |

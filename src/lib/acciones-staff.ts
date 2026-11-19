@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "./db";
 import { requirePersonal } from "./auth";
+import { randomBytes } from "node:crypto";
 import { bloquearCuentaAuth, CuentaOcupada, guardarCuentaAuth } from "./supabase/cuentas";
+import { supabaseAdmin } from "./supabase/servidor";
 import { validarPago, rechazarPago, pagoEnCaja, cancelarReserva, ErrorReserva } from "./reservas";
 import { setConfig, type Config } from "./config";
 import { auditar } from "./auditoria";
@@ -161,6 +163,34 @@ export async function bloquearUsuario(fd: FormData) {
   await bloquearCuentaAuth(u.authId, u.estado === "bloqueado");
   await auditar(a.correo, a.rol, u.estado === "activo" ? "desbloquear_usuario" : "bloquear_usuario", "usuarios", id, u.correo);
   redirect(`/admin/usuarios?tab=usuarios&${q("ok", `${u.nombres}: ${u.estado === "activo" ? "activo" : "bloqueado"}.`)}`);
+}
+
+/** Contraseña temporal de 10 caracteres con mayúscula, minúscula y número (sin caracteres ambiguos). */
+function passwordTemporal() {
+  const juego = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  for (;;) {
+    const p = Array.from(randomBytes(10), (b) => juego[b % juego.length]).join("");
+    if (/[A-Z]/.test(p) && /[a-z]/.test(p) && /\d/.test(p)) return p;
+  }
+}
+
+/**
+ * Reemplaza la recuperación de contraseña por correo: el administrador genera una contraseña temporal
+ * y se la entrega al usuario, que luego la cambia en Mi perfil.
+ */
+export async function restablecerPasswordUsuario(_: Estado, fd: FormData): Promise<Estado> {
+  const a = await requirePersonal(["administrador"]);
+  const u = await db.usuario.findUnique({ where: { id: String(fd.get("id")) } });
+  if (!u || u.estado === "eliminado" || !u.authId) return { error: "Esta cuenta no se puede restablecer." };
+  const password = passwordTemporal();
+  const { error } = await supabaseAdmin().auth.admin.updateUserById(u.authId, { password, email_confirm: true });
+  if (error) {
+    console.error("[restablecer contraseña]", error.code, error.message);
+    return { error: "No pudimos restablecer la contraseña. Intenta de nuevo." };
+  }
+  await db.usuario.update({ where: { id: u.id }, data: { intentosFallidos: 0, bloqueadoHasta: null, correoVerificado: true } });
+  await auditar(a.correo, a.rol, "restablecer_contrasena", "usuarios", u.id, u.correo);
+  return { ok: true, valores: { password, correo: u.correo } };
 }
 
 export async function guardarConfiguracion(_: Estado, fd: FormData): Promise<Estado> {

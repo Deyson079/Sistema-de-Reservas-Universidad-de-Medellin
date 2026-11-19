@@ -30,7 +30,7 @@ export default async function Perfil() {
       <div style={{ display: "grid", gap: 16 }}>
         <Seccion id="datos" titulo="Datos personales"><FormDatos u={{ ...u, comunidad: !ext }} /></Seccion>
         {ext && <Seccion id="facturacion" titulo="Datos de facturación" desc="Así aparecerán en tus facturas. El RUT es obligatorio antes del primer pago."><FormFacturacion f={u.facturacion} rut={rut} /></Seccion>}
-        <Seccion id="correo" titulo="Correo" desc="Te enviaremos un código al nuevo correo para confirmarlo."><FormCorreo actual={u.correo} demo={process.env.EMAIL_MODO !== "smtp" ? "1" : undefined} /></Seccion>
+        <Seccion id="correo" titulo="Correo" desc="El cambio se aplica al instante. Confírmalo con tu contraseña actual."><FormCorreo actual={u.correo} demo={process.env.EMAIL_MODO !== "smtp" ? "1" : undefined} /></Seccion>
         <Seccion id="contrasena" titulo="Contraseña"><FormPassword /></Seccion>
         <Seccion id="preferencias" titulo="Preferencias de notificación" desc="Los avisos de pagos y cancelaciones siempre llegan, porque afectan tu reserva.">
           <form action={guardarPreferencias} className="form">

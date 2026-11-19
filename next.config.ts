@@ -11,11 +11,16 @@ const nextConfig: NextConfig = {
   experimental: { serverActions: { bodySizeLimit: "6mb" } },
   poweredByHeader: false,
   compress: true,
-  // Logos y escudos casi nunca cambian: el navegador los guarda una semana y los revalida en segundo plano
-  // La verificación en dos pasos del personal se retiró: los enlaces antiguos vuelven al ingreso
+  // Se retiraron todos los códigos por correo (doble factor del personal, verificación del correo y
+  // recuperación de contraseña): los enlaces antiguos llevan a la pantalla que corresponde
   async redirects() {
-    return [{ source: "/personal/verificar", destination: "/personal", permanent: false }];
+    return [
+      { source: "/personal/verificar", destination: "/personal", permanent: false },
+      { source: "/verificar", destination: "/ingresar", permanent: false },
+      { source: "/recuperar/:paso*", destination: "/ayuda", permanent: false },
+    ];
   },
+  // Logos y escudos casi nunca cambian: el navegador los guarda una semana y los revalida en segundo plano
   async headers() {
     return [
       { source: "/brand/:archivo*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] },

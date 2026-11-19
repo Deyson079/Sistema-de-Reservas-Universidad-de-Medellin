@@ -4,7 +4,7 @@ import { getSesion } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "Plantillas de correo" };
-const NOMBRES: Record<string, string> = { codigo_verificacion: "Código de verificación", bienvenida: "Bienvenida", codigo_recuperacion: "Código de recuperación de contraseña", reserva_confirmada: "Reserva confirmada (con QR)", factura_generada: "Factura generada", pago_recibido: "Pago recibido", pago_aprobado: "Pago aprobado", pago_rechazado: "Pago rechazado", recordatorio: "Recordatorio 24 horas antes", reserva_vencida: "Reserva vencida", reserva_cancelada: "Reserva cancelada" };
+const NOMBRES: Record<string, string> = { bienvenida: "Bienvenida", reserva_confirmada: "Reserva confirmada (con QR)", factura_generada: "Factura generada", pago_recibido: "Pago recibido", pago_aprobado: "Pago aprobado", pago_rechazado: "Pago rechazado", recordatorio: "Recordatorio 24 horas antes", reserva_vencida: "Reserva vencida", reserva_cancelada: "Reserva cancelada" };
 
 export default async function Correos() {
   const s = await getSesion();
